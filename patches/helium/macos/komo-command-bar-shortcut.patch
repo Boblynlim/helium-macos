@@ -1,0 +1,23 @@
+--- a/chrome/browser/ui/browser_commands.cc
++++ b/chrome/browser/ui/browser_commands.cc
+@@ -2267,9 +2267,18 @@
+ }
+ 
+ void FocusSearch(Browser* browser) {
+-  // TODO(beng): replace this with FocusLocationBar
++  // komo: Cmd+K toggles the side panel (extension command bar)
+   base::RecordAction(UserMetricsAction("FocusSearch"));
+-  browser->window()->GetLocationBar()->FocusSearch();
++  auto* side_panel_ui =
++      browser->GetFeatures().side_panel_ui();
++  if (side_panel_ui) {
++    if (side_panel_ui->IsSidePanelShowing(
++            SidePanelEntry::PanelType::kBrowserDefault)) {
++      side_panel_ui->Close(SidePanelEntry::PanelType::kBrowserDefault);
++    } else {
++      side_panel_ui->Show(SidePanelEntryId::kExtension);
++    }
++  }
+ }
+ 
+ void FocusAppMenu(Browser* browser) {

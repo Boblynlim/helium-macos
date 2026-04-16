@@ -19,3 +19,4 @@ helium/macos/applescript-tab-select-command.patch
 
 helium/macos/komo-side-panel-left.patch
 helium/macos/komo-side-panel-min-width.patch
+helium/macos/komo-command-bar-shortcut.patch
