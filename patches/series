@@ -16,3 +16,7 @@ helium/macos/updater/fixup-sparkle-glue.patch
 helium/macos/updater/sparkle2-integration.patch
 helium/macos/updater/disable-default-updater.patch
 helium/macos/applescript-tab-select-command.patch
+
+helium/macos/komo-side-panel-left.patch
+helium/macos/komo-side-panel-min-width.patch
+helium/macos/komo-command-bar-shortcut.patch
