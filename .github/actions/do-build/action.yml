@@ -35,6 +35,13 @@ runs:
       run: echo TS=$(date +%s) >> $GITHUB_ENV
       shell: bash
 
+    # sccache's GHA cache backend (SCCACHE_GHA_ENABLED=on, set in github_build.sh)
+    # needs ACTIONS_RESULTS_URL + ACTIONS_RUNTIME_TOKEN, which GitHub does not
+    # export to step shells by default. Without them sccache aborts on startup
+    # ("cache url for ghac not found") and every compile fails. This surfaces them.
+    - name: Expose GitHub Actions cache runtime for sccache
+      uses: crazy-max/ghaction-github-runtime@v3
+
     - name: Show sccache stats before build
       run: sccache --show-stats
       shell: bash
