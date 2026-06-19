@@ -12,6 +12,13 @@ if [[ -f "$_root_dir/epoch_job_start.txt" ]]; then
   # GitHub's hard time limit is 6 h per job, we want to spare 1 h for steps before and after the build,
   # To get the remaining time for building we subtract 360*60s - 60*60s - (epoch_now - epoch_job_start)
   _remaining_time=$(( 360*60 - 60*60 - $(date +%s) + epoch_job_start ))
+  # Guard against a stale epoch_job_start.txt (it gets packed into the resource
+  # bundle, so a re-run that reuses an old bundle yields a non-positive budget).
+  # A negative duration makes `timeout` abort with "invalid option" / exit 125.
+  if [[ "$_remaining_time" -le 0 ]]; then
+    echo "warn: computed remaining build time ${_remaining_time}s <= 0 (stale epoch_job_start.txt?); using default" >&2
+    unset _remaining_time
+  fi
 fi
 
 cd "$_src_dir"
