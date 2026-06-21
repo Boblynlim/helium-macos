@@ -19,14 +19,21 @@ if [[ -f "$_root_dir/build_finished_$_target_cpu.log" ]] ; then
 
   xattr -cs out/Default/Helium.app
 
-  # Prepar the certificate for app signing
-  echo $MACOS_CERTIFICATE | base64 --decode > "$TMPDIR/certificate.p12"
+  # Prepare the certificate for app signing — only when a signing cert is
+  # actually configured. With no MACOS_CERTIFICATE secret (dev/fork builds),
+  # `security import` chokes on an empty p12 and aborts; skip it so
+  # sign_and_package_app.sh falls back to ad-hoc signing and still ships a .dmg.
+  if [ -n "${MACOS_CERTIFICATE:-}" ]; then
+    echo $MACOS_CERTIFICATE | base64 --decode > "$TMPDIR/certificate.p12"
 
-  security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
-  security default-keychain -s build.keychain
-  security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
-  security import "$TMPDIR/certificate.p12" -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
-  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+    security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+    security default-keychain -s build.keychain
+    security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+    security import "$TMPDIR/certificate.p12" -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+    security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+  else
+    echo "warn: MACOS_CERTIFICATE not set; building an ad-hoc-signed (unsigned) .dmg" >&2
+  fi
 
   if ! [ -z "${PROD_MACOS_SPECIAL_ENTITLEMENTS_PROFILE_B64:-}" ]; then
     export PROD_MACOS_SPECIAL_ENTITLEMENTS_PROFILE_PATH=$(mktemp)
@@ -65,9 +72,12 @@ if [[ -f "$_root_dir/build_finished_$_target_cpu.log" ]] ; then
     DELTA_ARG="--arm"
   fi
 
+  # Sparkle deltas are auto-update artifacts (diff vs previous releases); not
+  # needed for a dev/fork build, and a fork with no prior releases may have
+  # nothing to diff. Don't let a delta hiccup discard the already-built .dmg.
   ./github_prep_sparkle_deltas.sh \
     $DELTA_ARG "./release_asset/$_file_name" \
-    --out ./release_asset
+    --out ./release_asset || echo "warn: sparkle delta generation failed; shipping .dmg without deltas" >&2
 
   ls -kahl release_asset/
   du -hs release_asset/
